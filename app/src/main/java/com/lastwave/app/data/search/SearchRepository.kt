@@ -22,7 +22,7 @@ import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class SearchTab { TRACKS, ARTISTS, ALBUMS, PLAYLISTS, USERS }
+enum class SearchTab { TRACKS, VIDEOS, ARTISTS, ALBUMS, PLAYLISTS, USERS }
 
 @Immutable
 data class SearchResultItem(
@@ -34,17 +34,21 @@ data class SearchResultItem(
     val subtitle: String? = null,
     val videoId: String? = null,
     val entityId: String? = null,
+    val durationSeconds: Long? = null,
+    val isVideo: Boolean = false,
 )
 
 /**
- * Account-free YouTube Music search for songs, artists, albums and playlists. Last.fm
- * is used only for its explicitly labelled exact-user lookup tab.
+ * Account-free YouTube Music search for songs, artists, albums and playlists,
+ * plus distinct in-app YouTube video search. Last.fm is used only for its
+ * explicitly labelled exact-user lookup tab.
  */
 @Singleton
 class SearchRepository @Inject constructor(
     private val api: LastFmApiService,
     private val sessionPreferences: SessionPreferences,
     private val innerTube: InnerTubeMusicApi,
+    private val streamExtractor: com.lastwave.app.data.music.YouTubeStreamExtractor,
     private val http: OkHttpClient,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -82,7 +86,32 @@ class SearchRepository @Inject constructor(
                     subtitle = track.album,
                     videoId = track.videoId,
                     entityId = track.videoId,
+                    durationSeconds = track.durationSeconds?.toLong(),
                 )
+            }
+            SearchTab.VIDEOS -> {
+                val videos = innerTube.searchVideos(query).ifEmpty { streamExtractor.searchVideos(query) }
+                videos.map { video ->
+                    val metaParts = mutableListOf<String>()
+                    if (!video.channelName.isNullOrBlank()) metaParts += video.channelName
+                    video.viewCount?.let { count ->
+                        metaParts += if (count >= 1_000_000) "${count / 1_000_000}M views"
+                        else if (count >= 1_000) "${count / 1_000}K views"
+                        else "$count views"
+                    }
+                    if (!video.uploadDateText.isNullOrBlank()) metaParts += video.uploadDateText
+
+                    SearchResultItem(
+                        name = video.title,
+                        artist = video.channelName,
+                        artworkUrl = video.thumbnailUrl,
+                        subtitle = metaParts.joinToString(" \u2022 "),
+                        videoId = video.videoId,
+                        entityId = video.videoId,
+                        durationSeconds = video.durationSeconds,
+                        isVideo = true,
+                    )
+                }
             }
             SearchTab.ARTISTS -> innerTube.searchArtists(query).map { artist ->
                 SearchResultItem(

@@ -60,6 +60,16 @@ sealed class Screen(val route: String) {
         }
     }
 
+    data object YouTubeVideoPlayer : Screen("youtube_video_player/{videoId}?title={title}&channel={channel}&thumbnailUrl={thumbnailUrl}") {
+        fun createRoute(videoId: String, title: String = "", channel: String = "", thumbnailUrl: String = ""): String {
+            val encId = encodeArg(videoId)
+            val encTitle = encodeArg(title)
+            val encChannel = encodeArg(channel)
+            val encThumb = encodeArg(thumbnailUrl)
+            return "youtube_video_player/$encId?title=$encTitle&channel=$encChannel&thumbnailUrl=$encThumb"
+        }
+    }
+
     companion object {
         /**
          * Encodes one route argument (path segment or query value) so names

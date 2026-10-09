@@ -158,6 +158,18 @@ class SearchViewModel @Inject constructor(
                 // Start immediately. Similar song radio queue loads and extends infinitely.
                 musicPlayer.play(selected, sourceLabel = "Search", startRadio = true)
             }
+            SearchTab.VIDEOS -> {
+                // When played as audio through musicPlayer, mark source label as "YouTube Video"
+                val selected = PlayableTrack(
+                    title = item.name,
+                    artist = item.artist.orEmpty(),
+                    album = "YouTube Video",
+                    artworkUrl = item.artworkUrl,
+                    videoId = item.videoId,
+                    durationMs = item.durationSeconds?.takeIf { it > 0 }?.times(1_000L),
+                )
+                musicPlayer.play(selected, sourceLabel = "YouTube Video", startRadio = false)
+            }
             SearchTab.ARTISTS, SearchTab.ALBUMS -> viewModelScope.launch {
                 val tracks = runCatching { repository.songsFor(item) }.getOrDefault(emptyList())
                 if (tracks.isNotEmpty()) {

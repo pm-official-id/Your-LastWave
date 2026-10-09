@@ -557,6 +557,18 @@ class SettingsViewModel @Inject constructor(
     fun setCanvasOverCellular(enabled: Boolean) = launchSettingsAction("update canvas cellular setting") {
         settingsPreferences.setCanvasOverCellular(enabled)
     }
+    fun setYtStreamingBackend(backend: com.lastwave.app.data.local.YtStreamingBackend) = launchSettingsAction("update YouTube streaming backend") {
+        settingsPreferences.setYtStreamingBackend(backend)
+    }
+    fun setEnableYoutubeVideo(enabled: Boolean) = launchSettingsAction("update youtube video setting") {
+        settingsPreferences.setEnableYoutubeVideo(enabled)
+    }
+    fun setYoutubeBackgroundAudioDefault(enabled: Boolean) = launchSettingsAction("update youtube background audio setting") {
+        settingsPreferences.setYoutubeBackgroundAudioDefault(enabled)
+    }
+    fun setEnableAiTranscription(enabled: Boolean) = launchSettingsAction("update ai transcription setting") {
+        settingsPreferences.setEnableAiTranscription(enabled)
+    }
     fun setDownloadLyrics(enabled: Boolean) = launchSettingsAction("update download lyrics setting") {
         settingsPreferences.setDownloadLyrics(enabled)
     }

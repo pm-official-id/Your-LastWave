@@ -27,6 +27,7 @@ class YouTubeStreamExtractor @Inject constructor(
     private val http: OkHttpClient,
 ) {
     private val downloader = OkHttpNewPipeDownloader(http)
+    private val videoStreamCache = java.util.concurrent.ConcurrentHashMap<String, com.lastwave.app.data.video.YouTubeVideoStreamInfo>()
 
     @Volatile
     private var initialized = false
@@ -134,6 +135,115 @@ class YouTubeStreamExtractor @Inject constructor(
             }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    suspend fun resolveVideoStream(videoId: String): com.lastwave.app.data.video.YouTubeVideoStreamInfo = withContext(Dispatchers.IO) {
+        videoStreamCache[videoId]?.let { return@withContext it }
+        initialize()
+        val info = try {
+            StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$videoId")
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            throw IOException("YouTube video stream extraction failed for $videoId", error)
+        }
+
+        val qualities = mutableListOf<com.lastwave.app.data.video.VideoQualityOption>()
+        info.videoOnlyStreams.filter { !it.content.isNullOrBlank() }.forEach { s ->
+            val label = if (s.height > 0) "${s.height}p" else "HD"
+            if (qualities.none { it.qualityLabel == label }) {
+                qualities.add(com.lastwave.app.data.video.VideoQualityOption(label, s.content, s.height))
+            }
+        }
+        info.videoStreams.filter { !it.content.isNullOrBlank() }.forEach { s ->
+            val label = if (s.height > 0) "${s.height}p" else "HD"
+            if (qualities.none { it.qualityLabel == label }) {
+                qualities.add(com.lastwave.app.data.video.VideoQualityOption(label, s.content, s.height))
+            }
+        }
+        qualities.sortByDescending { it.height }
+
+        val bestVideo = qualities.firstOrNull() ?: throw IOException("No playable video streams available for $videoId")
+        val audioStream = info.audioStreams.filter { !it.content.isNullOrBlank() }.maxByOrNull { maxOf(it.averageBitrate, it.bitrate) }
+
+        val result = com.lastwave.app.data.video.YouTubeVideoStreamInfo(
+            videoId = videoId,
+            videoUrl = bestVideo.videoUrl,
+            width = bestVideo.height * 16 / 9,
+            height = bestVideo.height,
+            qualityLabel = bestVideo.qualityLabel,
+            audioUrl = audioStream?.content,
+            audioMimeType = audioStream?.format?.mimeType,
+            availableQualities = qualities,
+        )
+        videoStreamCache[videoId] = result
+        result
+    }
+
+    suspend fun searchVideos(query: String): List<com.lastwave.app.data.video.YouTubeVideoResult> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+        initialize()
+        try {
+            val extractor = ServiceList.YouTube.getSearchExtractor(
+                query.trim(),
+                listOf("videos"),
+                "",
+            )
+            extractor.fetchPage()
+            val items = extractor.initialPage?.items ?: emptyList()
+            items.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>().map { item ->
+                val videoId = item.url?.let { u ->
+                    if (u.contains("v=")) u.substringAfter("v=").substringBefore("&")
+                    else u.substringAfterLast("/")
+                } ?: ""
+                val thumb = runCatching { item.thumbnails?.firstOrNull()?.url }.getOrNull()
+                    ?: if (videoId.isNotBlank()) "https://i.ytimg.com/vi/$videoId/hqdefault.jpg" else null
+                com.lastwave.app.data.video.YouTubeVideoResult(
+                    videoId = videoId,
+                    title = item.name.orEmpty(),
+                    channelName = item.uploaderName.orEmpty(),
+                    channelAvatarUrl = null,
+                    thumbnailUrl = thumb,
+                    durationSeconds = item.duration.takeIf { it > 0 },
+                    viewCount = item.viewCount.takeIf { it > 0 },
+                    uploadDateText = item.textualUploadDate,
+                )
+            }.filter { it.videoId.isNotBlank() && it.title.isNotBlank() }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun resolveRelatedVideos(videoId: String): List<com.lastwave.app.data.video.YouTubeVideoResult> = withContext(Dispatchers.IO) {
+        if (videoId.isBlank()) return@withContext emptyList()
+        initialize()
+        try {
+            val info = StreamInfo.getInfo(ServiceList.YouTube, "https://www.youtube.com/watch?v=$videoId")
+            info.relatedItems?.filterIsInstance<org.schabi.newpipe.extractor.stream.StreamInfoItem>()?.map { item ->
+                val id = item.url?.let { u ->
+                    if (u.contains("v=")) u.substringAfter("v=").substringBefore("&")
+                    else u.substringAfterLast("/")
+                } ?: ""
+                val thumb = runCatching { item.thumbnails?.firstOrNull()?.url }.getOrNull()
+                    ?: if (id.isNotBlank()) "https://i.ytimg.com/vi/$id/hqdefault.jpg" else null
+                com.lastwave.app.data.video.YouTubeVideoResult(
+                    videoId = id,
+                    title = item.name.orEmpty(),
+                    channelName = item.uploaderName.orEmpty(),
+                    channelAvatarUrl = null,
+                    thumbnailUrl = thumb,
+                    durationSeconds = item.duration.takeIf { it > 0 },
+                    viewCount = item.viewCount.takeIf { it > 0 },
+                    uploadDateText = item.textualUploadDate,
+                )
+            }.orEmpty().filter { it.videoId.isNotBlank() && it.title.isNotBlank() }
+        } catch (error: kotlinx.coroutines.CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyList()
         }
     }
 

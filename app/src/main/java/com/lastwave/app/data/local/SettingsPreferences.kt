@@ -171,7 +171,22 @@ data class MiscSettings(
     val canvasFullBleed: Boolean = true,
     /** When true, canvas video loops may be fetched over cellular data. */
     val canvasOverCellular: Boolean = true,
+    val ytStreamingBackend: YtStreamingBackend = YtStreamingBackend.NEWPIPE,
+    val enableYoutubeVideoFeatures: Boolean = true,
+    val youtubeBackgroundAudioDefault: Boolean = true,
+    val enableAiTranscription: Boolean = true,
 )
+
+enum class YtStreamingBackend(val id: String, val title: String, val subtitle: String) {
+    NEWPIPE("newpipe", "NewPipe Engine", "Raw direct media extraction + Media3 ExoPlayer (Ad-Free)"),
+    FLOW("flow", "Flow Engine", "Flow / InnerTube fast direct stream engine"),
+    NATIVE_ADBLOCK("native_adblock", "Native YT with AdBlock", "Fast embedded player with 0ms ad-block & SponsorBlock");
+
+    companion object {
+        fun fromId(id: String?): YtStreamingBackend =
+            entries.firstOrNull { it.id == id } ?: NEWPIPE
+    }
+}
 
 /** Toggleable sections of the Home tab (see FeedScreen). Hero greeting and
  *  footer are structural; everything listed here can be hidden by the user.
@@ -275,6 +290,10 @@ class SettingsPreferences @Inject constructor(
         val CANVAS_ENABLED = booleanPreferencesKey("lw_canvas_enabled")
         val CANVAS_FULL_BLEED = booleanPreferencesKey("lw_canvas_full_bleed")
         val CANVAS_OVER_CELLULAR = booleanPreferencesKey("lw_canvas_over_cellular")
+        val YT_STREAMING_BACKEND = stringPreferencesKey("lw_yt_streaming_backend")
+        val ENABLE_YOUTUBE_VIDEO = booleanPreferencesKey("lw_enable_youtube_video")
+        val YOUTUBE_BACKGROUND_AUDIO_DEFAULT = booleanPreferencesKey("lw_youtube_bg_audio")
+        val ENABLE_AI_TRANSCRIPTION = booleanPreferencesKey("lw_enable_ai_transcription")
     }
 
     val settings: Flow<MiscSettings> = dataStore.data
@@ -319,6 +338,10 @@ class SettingsPreferences @Inject constructor(
                 canvasEnabled = p.readSafely(Keys.CANVAS_ENABLED) ?: true,
                 canvasFullBleed = p.readSafely(Keys.CANVAS_FULL_BLEED) ?: true,
                 canvasOverCellular = p.readSafely(Keys.CANVAS_OVER_CELLULAR) ?: true,
+                ytStreamingBackend = YtStreamingBackend.fromId(p.readSafely(Keys.YT_STREAMING_BACKEND)),
+                enableYoutubeVideoFeatures = p.readSafely(Keys.ENABLE_YOUTUBE_VIDEO) ?: true,
+                youtubeBackgroundAudioDefault = p.readSafely(Keys.YOUTUBE_BACKGROUND_AUDIO_DEFAULT) ?: true,
+                enableAiTranscription = p.readSafely(Keys.ENABLE_AI_TRANSCRIPTION) ?: true,
             )
         }
 
@@ -527,6 +550,22 @@ class SettingsPreferences @Inject constructor(
 
     suspend fun setCanvasOverCellular(enabled: Boolean) {
         dataStore.edit { it[Keys.CANVAS_OVER_CELLULAR] = enabled }
+    }
+
+    suspend fun setYtStreamingBackend(backend: YtStreamingBackend) {
+        dataStore.edit { it[Keys.YT_STREAMING_BACKEND] = backend.id }
+    }
+
+    suspend fun setEnableYoutubeVideo(enabled: Boolean) {
+        dataStore.edit { it[Keys.ENABLE_YOUTUBE_VIDEO] = enabled }
+    }
+
+    suspend fun setYoutubeBackgroundAudioDefault(enabled: Boolean) {
+        dataStore.edit { it[Keys.YOUTUBE_BACKGROUND_AUDIO_DEFAULT] = enabled }
+    }
+
+    suspend fun setEnableAiTranscription(enabled: Boolean) {
+        dataStore.edit { it[Keys.ENABLE_AI_TRANSCRIPTION] = enabled }
     }
 
     private companion object {

@@ -57,10 +57,10 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.lastwave.app"
+        applicationId = "com.yourlastwave.app"
         minSdk = (project.findProperty("minSdk") as? String)?.toIntOrNull() ?: 29
         targetSdk = 35
-        versionCode = 24
+        versionCode = 25
         versionName = "4.2.4"
 
         val lastWaveLyricsToken = resolveSecret("LASTWAVE_LYRICS_TOKEN")
@@ -170,7 +170,7 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
         jniLibs {
-            useLegacyPackaging = true
+            useLegacyPackaging = false
         }
     }
 
@@ -250,11 +250,11 @@ dependencies {
 
     // Native in-app audio playback, background service, system media
     // controls, Bluetooth/headset controls and a MediaController-backed UI.
-    implementation("androidx.media3:media3-exoplayer:1.2.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.2.1")
+    implementation("androidx.media3:media3-exoplayer:1.5.0")
+    implementation("androidx.media3:media3-exoplayer-hls:1.5.0")
     // Segmented provider-module path: DASH chunk source + CDM decryption.
-    // Pinned to the same 1.2.1 line as exoplayer/hls to avoid binary mismatch.
-    implementation("androidx.media3:media3-exoplayer-dash:1.2.1")
+    // Pinned to the same 1.5.0 line as exoplayer/hls to avoid binary mismatch.
+    implementation("androidx.media3:media3-exoplayer-dash:1.5.0")
     // MediaBrowserServiceCompat/MediaSessionCompat bridge used by Android
     // Auto to browse the LastWave library and control the same player.
     implementation("androidx.media:media:1.7.0")
@@ -263,7 +263,7 @@ dependencies {
     // The renderer factory prefers FFmpeg for every codec it supports so all
     // devices decode through one deterministic, OEM-bug-free path; platform
     // decoders remain as automatic fallbacks.
-    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.2.1+1")
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.5.0+1")
 
     // Core library desugaring required by the FFmpeg decoder AAR metadata.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")

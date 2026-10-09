@@ -1508,6 +1508,88 @@ class InnerTubeMusicApi @Inject constructor(
     suspend fun searchAlbums(query: String, limit: Int = 30): List<YouTubeMusicEntity> =
         searchEntities(query, YouTubeMusicEntityKind.ALBUM, ALBUM_SEARCH_FILTER, limit)
 
+    suspend fun searchVideos(
+        query: String,
+        limit: Int = 30,
+    ): List<com.lastwave.app.data.video.YouTubeVideoResult> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+        val config = getWebConfig()
+        val (hl, gl) = getEffectiveHlGl()
+        val body = buildJsonObject {
+            put("context", buildJsonObject {
+                put("client", buildJsonObject {
+                    put("clientName", "WEB")
+                    put("clientVersion", config.clientVersion)
+                    put("hl", hl)
+                    put("gl", gl)
+                    if (!config.visitorData.isNullOrBlank()) put("visitorData", config.visitorData)
+                })
+            })
+            put("query", query.trim())
+            put("params", "EgIQAQ%3D%3D") // Videos filter
+        }
+        val root = runCatching {
+            post(
+                url = "$YOUTUBE_API/search?key=${config.apiKey}&prettyPrint=false",
+                body = body,
+                clientName = "WEB",
+                clientVersion = config.clientVersion,
+                userAgent = WEB_USER_AGENT,
+                origin = YOUTUBE_ORIGIN,
+                referer = "$YOUTUBE_ORIGIN/",
+                callTimeoutMs = SEARCH_REQUEST_TIMEOUT_MS,
+            )
+        }.getOrNull() ?: return@withContext emptyList()
+
+        val videoRenderers = mutableListOf<JsonObject>()
+        collectObjects(root, "videoRenderer", videoRenderers)
+
+        videoRenderers.mapNotNull { renderer ->
+            val videoId = renderer.string("videoId") ?: return@mapNotNull null
+            val title = renderer.obj("title")?.array("runs")?.joinToString("") { it.asObject()?.string("text").orEmpty() }
+                ?: renderer.obj("title")?.string("simpleText")
+                ?: return@mapNotNull null
+            val channelName = renderer.obj("ownerText")?.array("runs")?.firstOrNull()?.asObject()?.string("text")
+                ?: renderer.obj("shortBylineText")?.array("runs")?.firstOrNull()?.asObject()?.string("text")
+                ?: ""
+            val thumbnails = renderer.obj("thumbnail")?.array("thumbnails")
+            val thumbnailUrl = thumbnails?.lastOrNull()?.asObject()?.string("url")?.highResolutionArtwork()
+                ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+
+            val durationText = renderer.obj("lengthText")?.string("simpleText")
+            val durationSeconds = durationText?.let(::parseDuration)?.toLong()
+            val viewCountText = renderer.obj("viewCountText")?.string("simpleText")
+                ?: renderer.obj("shortViewCountText")?.string("simpleText")
+            val viewCount = parseViewCount(viewCountText)
+            val uploadDateText = renderer.obj("publishedTimeText")?.string("simpleText")
+
+            com.lastwave.app.data.video.YouTubeVideoResult(
+                videoId = videoId,
+                title = title,
+                channelName = channelName,
+                thumbnailUrl = thumbnailUrl,
+                durationSeconds = durationSeconds,
+                viewCount = viewCount,
+                uploadDateText = uploadDateText,
+            )
+        }.distinctBy { it.videoId }.filter { it.videoId.isNotBlank() && it.title.isNotBlank() }.take(limit)
+    }
+
+    private fun parseViewCount(text: String?): Long? {
+        if (text.isNullOrBlank()) return null
+        val clean = text.lowercase().replace("views", "").replace("view", "").replace(",", "").trim()
+        return try {
+            when {
+                clean.endsWith('b') -> (clean.dropLast(1).trim().toFloat() * 1_000_000_000).toLong()
+                clean.endsWith('m') -> (clean.dropLast(1).trim().toFloat() * 1_000_000).toLong()
+                clean.endsWith('k') -> (clean.dropLast(1).trim().toFloat() * 1_000).toLong()
+                else -> clean.toLongOrNull()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Loads and parses full artist details including top songs, albums, singles, and similar artists. */
     suspend fun fetchArtistPage(
         browseId: String,

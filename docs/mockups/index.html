@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LastWave-Native YouTube Video Search & Playback Mockups</title>
+  <style>
+    :root {
+      --bg: #0e0e12;
+      --surface: #17161b;
+      --surface-highest: #26242c;
+      --primary: #9b40bf;
+      --primary-container: #4a1963;
+      --on-primary: #ffffff;
+      --on-surface: #f3eff7;
+      --on-surface-variant: #a59fa8;
+      --outline: #38343f;
+      --card-radius: 20px;
+    }
+    body {
+      background-color: #050508;
+      color: var(--on-surface);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #e0b0ff;
+    }
+    p.subtitle {
+      color: var(--on-surface-variant);
+      margin-bottom: 32px;
+      max-width: 800px;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .mockups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 32px;
+      width: 100%;
+      max-width: 1200px;
+    }
+    .device-card {
+      background: #111115;
+      border: 1px solid var(--outline);
+      border-radius: 28px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    }
+    .card-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-verified { background: #1f4028; color: #72e592; }
+    .badge-proposed { background: #4a3319; color: #ffb86c; }
+    .card-desc {
+      font-size: 13px;
+      color: var(--on-surface-variant);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+    .phone-screen {
+      background: var(--bg);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      height: 680px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    /* Top bar */
+    .status-bar {
+      height: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      font-size: 12px;
+      color: var(--on-surface-variant);
+    }
+    .app-header {
+      background: var(--surface);
+      border-bottom-left-radius: 24px;
+      border-bottom-right-radius: 24px;
+      padding: 12px 16px 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .search-input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .back-btn {
+      color: var(--on-surface);
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .search-pill {
+      flex: 1;
+      height: 42px;
+      background: var(--surface-highest);
+      border-radius: 21px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--on-surface);
+    }
+    .tabs-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .tab-pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--on-surface-variant);
+      white-space: nowrap;
+    }
+    .tab-pill.active {
+      background: var(--primary);
+      color: var(--on-primary);
+      font-weight: 600;
+    }
+    .tab-pill.special-active {
+      background: #c026d3;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(192, 38, 211, 0.4);
+    }
+    .scroll-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    /* Video Result Card */
+    .video-card {
+      background: var(--surface);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+    .video-thumb-container {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      background: #201e28;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-size: cover;
+      background-position: center;
+    }
+    .duration-badge {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .video-meta {
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .channel-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #3c3547;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .video-info {
+      flex: 1;
+    }
+    .video-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+      color: var(--on-surface);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .video-channel {
+      font-size: 12px;
+      color: var(--on-surface-variant);
+    }
+    /* Mini player */
+    .mini-player {
+      height: 58px;
+      background: #1e1b24;
+      margin: 8px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    }
+    .mini-art {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: #392b45;
+    }
+    .mini-text {
+      flex: 1;
+      font-size: 12.5px;
+    }
+    .mini-title { font-weight: 600; }
+    .mini-sub { font-size: 11px; color: var(--on-surface-variant); }
+    /* Player Screen */
+    .video-viewport {
+      width: 100%;
+      height: 220px;
+      background: #000;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .video-overlay-controls {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
+    .ctrl-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .ctrl-btn.play {
+      width: 54px;
+      height: 54px;
+      background: var(--primary);
+      font-size: 22px;
+    }
+    .player-details {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .mode-toggle-group {
+      display: flex;
+      background: var(--surface-highest);
+      border-radius: 14px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .mode-toggle-btn {
+      flex: 1;
+      padding: 8px;
+      border-radius: 11px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      color: var(--on-surface-variant);
+    }
+    .mode-toggle-btn.selected {
+      background: var(--primary);
+      color: #fff;
+    }
+    /* Notification */
+    .notif-card {
+      background: #24222a;
+      border-radius: 18px;
+      padding: 12px 16px;
+      margin: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .notif-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--on-surface-variant);
+      margin-bottom: 8px;
+    }
+    .notif-body {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .notif-art {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: #4a2c5b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>LastWave-Native &mdash; YouTube Video Integration Mockups</h1>
+  <p class="subtitle">
+    Faithful design mockups matching LastWave's actual Material3 / LiquidGlass theme, Expressive Header shapes, and tab architecture.
+  </p>
+
+  <div class="mockups-grid">
+
+    <!-- Mockup 1: Search Tab -->
+    <div class="device-card">
+      <div class="card-title">
+        <span>1. Search: "Videos" Tab</span>
+        <span class="badge badge-verified">UI Verified</span>
+      </div>
+      <div class="card-desc">
+        A dedicated <strong>Videos</strong> filter pill beside Tracks, Artists, Albums, Playlists. Populated with rich video search results (16:9 thumbnail, duration overlay, channel name, video title).
+      </div>
+      <div class="phone-screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span>5G &bull; 92%</span>
+        </div>
+        <div class="app-header">
+          <div class="search-input-row">
+            <span class="back-btn">&larr;</span>
+            <div class="search-pill">
+              <span style="color: #c026d3;">&#128269;</span>
+              <span>Hans Zimmer Live 2026</span>
+              <span style="margin-left: auto; color: var(--on-surface-variant); font-size: 16px;">&times;</span>
+            </div>
+          </div>
+          <div class="tabs-row">
+            <div class="tab-pill">Tracks</div>
+            <div class="tab-pill special-active">Videos (YT)</div>
+            <div class="tab-pill">Artists</div>
+            <div class="tab-pill">Albums</div>
+            <div class="tab-pill">Playlists</div>
+          </div>
+        </div>
+
+        <div class="scroll-content">
+          <!-- Video Result 1 -->
+          <div class="video-card">
+            <div class="video-thumb-container" style="background: linear-gradient(135deg, #2b1055, #7597de);">
+              <span style="font-size: 32px; opacity: 0.8;">&#9658;</span>
+              <span class="duration-badge">8:24</span>
+            </div>
+            <div class="video-meta">
+              <div class="channel-avatar">HZ</div>
+              <div class="video-info">
+                <div class="video-title">Hans Zimmer - Interstellar Suite (Live in Prague 4K)</div>
+                <div class="video-channel">Hans Zimmer &bull; 48M views &bull; 6 years ago</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Result 2 -->
+          <div class="video-card">
+            <div class="video-thumb-container" style="background: linear-gradient(135deg, #1b2838, #2a475e);">
+              <span style="font-size: 32px; opacity: 0.8;">&#9658;</span>
+              <span class="duration-badge">12:45</span>
+            </div>
+            <div class="video-meta">
+              <div class="channel-avatar">O</div>
+              <div class="video-info">
+                <div class="video-title">Dune: Part Two OST - Live Concert Orchestration</div>
+                <div class="video-channel">WaterTower Music &bull; 3.2M views &bull; 7 months ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mini-player">
+          <div class="mini-art"></div>
+          <div class="mini-text">
+            <div class="mini-title">Time (Live)</div>
+            <div class="mini-sub">Hans Zimmer</div>
+          </div>
+          <span style="font-size: 18px; margin-right: 6px;">&#10074;&#10074;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 2: Video Playback Screen -->
+    <div class="device-card">
+      <div class="card-title">
+        <span>2. In-App Video Playback</span>
+        <span class="badge badge-verified">UI Verified</span>
+      </div>
+      <div class="card-desc">
+        Dedicated in-app video viewport with full playback controls, orientation &amp; fullscreen support, stream quality badge, and audio-only switcher.
+      </div>
+      <div class="phone-screen">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span>5G &bull; 92%</span>
+        </div>
+
+        <!-- Video Viewport -->
+        <div class="video-viewport">
+          <div style="font-size: 40px; color: #555;">&#127916;</div>
+          <div class="video-overlay-controls">
+            <div class="ctrl-btn">&#9198;</div>
+            <div class="ctrl-btn play">&#9658;</div>
+            <div class="ctrl-btn">&#9197;</div>
+          </div>
+          <div style="position: absolute; top: 12px; left: 14px; font-size: 18px;">&larr;</div>
+          <div style="position: absolute; top: 12px; right: 14px; font-size: 16px;">&#x2699; 1080p</div>
+          <div style="position: absolute; bottom: 8px; right: 12px; font-size: 15px;">&#x26F6;</div>
+        </div>
+
+        <!-- Track Info & Controls -->
+        <div class="player-details">
+          <div>
+            <div style="font-size: 16px; font-weight: 700;">Hans Zimmer - Interstellar Suite (Live in Prague)</div>
+            <div style="font-size: 13px; color: var(--on-surface-variant); margin-top: 3px;">Hans Zimmer &bull; 8:24</div>
+          </div>
+
+          <!-- Video / Audio Toggle -->
+          <div class="mode-toggle-group">
+            <div class="mode-toggle-btn selected">&#127916; Video (In-App)</div>
+            <div class="mode-toggle-btn">&#127925; Audio Only</div>
+          </div>
+
+          <div style="background: var(--surface); border-radius: 16px; padding: 14px; border: 1px solid rgba(255,255,255,0.05); margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--on-surface-variant); margin-bottom: 6px;">
+              <span>03:15</span>
+              <span>08:24</span>
+            </div>
+            <!-- Wavy seek bar mock -->
+            <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; position: relative; overflow: hidden;">
+              <div style="width: 38%; height: 100%; background: var(--primary);"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-around; margin-top: 18px; font-size: 20px;">
+              <span>&#128256;</span>
+              <span>&#9198;</span>
+              <span style="font-size: 26px; color: var(--primary);">&#10074;&#10074;</span>
+              <span>&#9197;</span>
+              <span>&#128257;</span>
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: var(--on-surface-variant); text-align: center; margin-top: auto;">
+            Powered by NewPipe Media3 Extractor &bull; Isolated Video Pipe
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mockup 3: Background Audio Mode -->
+    <div class="device-card">
+      <div class="card-title">
+        <span>3. Background / Audio-Only Mode</span>
+        <span class="badge badge-proposed">To Validate</span>
+      </div>
+      <div class="card-desc">
+        Proposed background audio playback: detaches video rendering to save battery/bandwidth while routing audio to MediaSession notification.
+      </div>
+      <div class="phone-screen" style="justify-content: flex-start;">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span>5G &bull; 92%</span>
+        </div>
+
+        <div style="padding: 16px; text-align: center;">
+          <div style="font-size: 13px; color: var(--on-surface-variant); margin-bottom: 6px;">Lock Screen / Notification Center</div>
+        </div>
+
+        <!-- Android System Notification Mockup -->
+        <div class="notif-card">
+          <div class="notif-top">
+            <span>&#127925; LastWave &bull; YouTube Video Audio</span>
+            <span>now</span>
+          </div>
+          <div class="notif-body">
+            <div class="notif-art" style="display: flex; align-items: center; justify-content: center; font-size: 20px;">
+              &#127926;
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 13px; font-weight: 600;">Interstellar Suite (Live)</div>
+              <div style="font-size: 11.5px; color: var(--on-surface-variant);">Hans Zimmer &bull; Audio Stream</div>
+            </div>
+            <div style="display: flex; gap: 12px; font-size: 18px;">
+              <span>&#9198;</span>
+              <span style="color: var(--primary);">&#10074;&#10074;</span>
+              <span>&#9197;</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin: 16px; padding: 14px; background: rgba(255, 184, 108, 0.08); border-radius: 14px; border: 1px solid rgba(255, 184, 108, 0.2); font-size: 12.5px; line-height: 1.45; color: #ffb86c;">
+          <strong>Technical Validation Note:</strong><br>
+          Marked as <em>to validate</em>. When routed through LastWave's <code>MusicPlayer</code>/<code>MusicPlaybackService</code>, video audio items can play in background if stream extraction yields an audio-only stream or standalone player service. Queue isolation must ensure YouTube video items do not corrupt LastWave's Last.fm scrobbling and music queue.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

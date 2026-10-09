@@ -105,6 +105,8 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Waves
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Headphones
 import com.lastwave.app.data.local.LyricsAnimation
 import com.lastwave.app.data.local.LyricsProvider
 import com.lastwave.app.data.local.LyricsUiVersion
@@ -469,6 +471,7 @@ fun SettingsScreen(
     }
     var showQualityDialog by remember { mutableStateOf(false) }
     var showDownloadQualityDialog by remember { mutableStateOf(false) }
+    var showYtBackendDialog by remember { mutableStateOf(false) }
     var showEqSheet by remember { mutableStateOf(false) }
     var showLyricsAnimationSheet by remember { mutableStateOf(false) }
     var showLyricsProviderDialog by remember { mutableStateOf(false) }
@@ -1283,6 +1286,55 @@ fun SettingsScreen(
                                 onCheckedChange = viewModel::setCanvasOverCellular,
                                 position = position,
                                 isHighlighted = (highlightedSettingId == "appearance.canvas_cellular"),
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionLabel("YouTube Video & AI Integration")
+                    SettingsGroup(rowCount = 4) { index, position ->
+                        when (index) {
+                            0 -> SettingsToggleCard(
+                                icon = Icons.Filled.Videocam,
+                                iconContainer = MaterialTheme.colorScheme.primaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                title = "Enable YouTube Video Features",
+                                subtitle = "In-app YouTube video search, playback, quality switch & download",
+                                checked = misc.enableYoutubeVideoFeatures,
+                                onCheckedChange = viewModel::setEnableYoutubeVideo,
+                                position = position,
+                            )
+                            1 -> SettingsActionCard(
+                                icon = Icons.Filled.Tune,
+                                iconContainer = MaterialTheme.colorScheme.secondaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                title = "YouTube Streaming Engine",
+                                subtitle = misc.ytStreamingBackend.title + " \u2022 " + misc.ytStreamingBackend.subtitle,
+                                onClick = { showYtBackendDialog = true },
+                                position = position,
+                            )
+                            2 -> SettingsToggleCard(
+                                icon = Icons.Filled.Headphones,
+                                iconContainer = MaterialTheme.colorScheme.tertiaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                title = "Background Audio Default",
+                                subtitle = "Play YouTube videos in background audio mode by default",
+                                checked = misc.youtubeBackgroundAudioDefault,
+                                onCheckedChange = viewModel::setYoutubeBackgroundAudioDefault,
+                                position = position,
+                            )
+                            3 -> SettingsToggleCard(
+                                icon = Icons.Filled.AutoAwesome,
+                                iconContainer = MaterialTheme.colorScheme.primaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                title = "AI Transcription & Lyrics",
+                                subtitle = "Enable AI transcription and lyrics generation in video player",
+                                checked = misc.enableAiTranscription,
+                                onCheckedChange = viewModel::setEnableAiTranscription,
+                                position = position,
                             )
                         }
                     }
@@ -2429,6 +2481,69 @@ fun SettingsScreen(
             }
         }
     }
+
+    if (showYtBackendDialog) {
+        YtStreamingBackendDialog(
+            current = misc.ytStreamingBackend,
+            onSelect = viewModel::setYtStreamingBackend,
+            onDismiss = { showYtBackendDialog = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun YtStreamingBackendDialog(
+    current: com.lastwave.app.data.local.YtStreamingBackend,
+    onSelect: (com.lastwave.app.data.local.YtStreamingBackend) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("YouTube Streaming Engine") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    "Choose which engine handles YouTube video and audio streaming in LastWave.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                com.lastwave.app.data.local.YtStreamingBackend.entries.forEach { backend ->
+                    val selected = backend == current
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(backend); onDismiss() }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected, onClick = { onSelect(backend); onDismiss() })
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                backend.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                            )
+                            Text(
+                                backend.subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Done") }
+        },
+    )
 }
 
 private fun appVersionName(context: android.content.Context): String = try {

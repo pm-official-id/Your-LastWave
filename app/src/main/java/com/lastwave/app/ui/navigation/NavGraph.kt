@@ -475,6 +475,16 @@ fun LastWaveNavHost(
                     onOpenPlaylist = { playlistId ->
                         navController.navigate(Screen.FeedPlaylistDetail.createRoute(playlistId))
                     },
+                    onOpenVideo = { videoId, title, channel, thumbnailUrl ->
+                        navController.navigate(
+                            Screen.YouTubeVideoPlayer.createRoute(
+                                videoId = videoId,
+                                title = title,
+                                channel = channel,
+                                thumbnailUrl = thumbnailUrl,
+                            ),
+                        )
+                    },
                 )
             }
         }
@@ -586,6 +596,42 @@ fun LastWaveNavHost(
                     onOpenAlbum = { title, artist, id ->
                         navController.navigate(Screen.AlbumDetail.createRoute(title, artist, id))
                     },
+                )
+            }
+        }
+
+        composable(
+            route = Screen.YouTubeVideoPlayer.route,
+            arguments = listOf(
+                androidx.navigation.navArgument("videoId") {
+                    type = androidx.navigation.NavType.StringType
+                },
+                androidx.navigation.navArgument("title") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = ""
+                },
+                androidx.navigation.navArgument("channel") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = ""
+                },
+                androidx.navigation.navArgument("thumbnailUrl") {
+                    type = androidx.navigation.NavType.StringType
+                    defaultValue = ""
+                },
+            ),
+        ) { backStackEntry ->
+            val videoId = backStackEntry.arguments?.getString("videoId").orEmpty()
+            val title = backStackEntry.arguments?.getString("title").orEmpty()
+            val channel = backStackEntry.arguments?.getString("channel").orEmpty()
+            val thumbnailUrl = backStackEntry.arguments?.getString("thumbnailUrl").orEmpty()
+
+            PredictiveBackScreen(onBack = { navController.popBackStack() }) {
+                com.lastwave.app.ui.video.YouTubeVideoPlayerScreen(
+                    videoId = videoId,
+                    title = title,
+                    channel = channel,
+                    thumbnailUrl = thumbnailUrl,
+                    onBack = { navController.popBackStack() },
                 )
             }
         }
