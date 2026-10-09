@@ -90,6 +90,10 @@ Built with **Material 3 Expressive**, LastWave combines effortless ad-free strea
 | Icon | Feature | Highlight |
 |:---:|:---|:---|
 | <img src="https://api.iconify.design/lucide:play-circle.svg?color=%23FF0000" width="20" height="20" /> | **YouTube Music Client** | Stream tracks, albums, artists, and public playlists from YouTube Music with zero ads and background playback. |
+| <img src="https://api.iconify.design/lucide:video.svg?color=%23FF0000" width="20" height="20" /> | **In-App YouTube Video Search** | Dedicated regular YouTube video search tab with 16:9 thumbnail previews, quality switcher, and video downloads. |
+| <img src="https://api.iconify.design/lucide:shield.svg?color=%2300E5FF" width="20" height="20" /> | **100% Ad-Free & SponsorBlock** | Native Media3 ExoPlayer direct stream playback with 0 ads and automatic SponsorBlock segment skipping (sponsors, intros). |
+| <img src="https://api.iconify.design/lucide:sparkles.svg?color=%23FFB4A2" width="20" height="20" /> | **AI Transcription & Lyrics** | AI-powered speech-to-text transcription and lyric generator for video streams right inside the player. |
+| <img src="https://api.iconify.design/lucide:palette.svg?color=%23C6F100" width="20" height="20" /> | **ArchiveTune Themes & Layouts** | 11+ ArchiveTune theme presets (Catppuccin, Tokyo Night, Nord, Vinyl, Cassette, BitChord) dynamically transforming player layouts. |
 | <img src="https://api.iconify.design/lucide:wand-2.svg?color=%23C6F100" width="20" height="20" /> | **Smart Playlist Generator** | Algorithmic taste mixes and mood radios generated from your listening history, seed artists, loved tracks, and top genres. |
 | <img src="https://api.iconify.design/lucide:radio.svg?color=%23D51007" width="20" height="20" /> | **Universal Last.fm Scrobbler** | Built-in media scrobbler tracking listening activity across YouTube Music, Spotify, Apple Music, and local players with zero battery drain. |
 | <img src="https://api.iconify.design/lucide:mic.svg?color=%23FFB4A2" width="20" height="20" /> | **Real-Time Synced Lyrics** | Millisecond-accurate animated karaoke lyrics powered by LRCLIB with 8 customizable fluid physics motions. |
