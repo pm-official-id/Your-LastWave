@@ -569,6 +569,12 @@ class SettingsViewModel @Inject constructor(
     fun setEnableAiTranscription(enabled: Boolean) = launchSettingsAction("update ai transcription setting") {
         settingsPreferences.setEnableAiTranscription(enabled)
     }
+    fun setDefaultVideoQuality(quality: String) = launchSettingsAction("update default video quality") {
+        settingsPreferences.setDefaultVideoQuality(quality)
+    }
+    fun setDefaultAudioQuality(quality: String) = launchSettingsAction("update default audio quality") {
+        settingsPreferences.setDefaultAudioQuality(quality)
+    }
     fun setDownloadLyrics(enabled: Boolean) = launchSettingsAction("update download lyrics setting") {
         settingsPreferences.setDownloadLyrics(enabled)
     }

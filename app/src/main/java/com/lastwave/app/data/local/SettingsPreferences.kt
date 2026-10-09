@@ -175,12 +175,13 @@ data class MiscSettings(
     val enableYoutubeVideoFeatures: Boolean = true,
     val youtubeBackgroundAudioDefault: Boolean = true,
     val enableAiTranscription: Boolean = true,
+    val defaultVideoQuality: String = "720p",
+    val defaultAudioQuality: String = "High (320k)",
 )
 
 enum class YtStreamingBackend(val id: String, val title: String, val subtitle: String) {
     NEWPIPE("newpipe", "NewPipe Engine", "Raw direct media extraction + Media3 ExoPlayer (Ad-Free)"),
-    FLOW("flow", "Flow Engine", "Flow / InnerTube fast direct stream engine"),
-    NATIVE_ADBLOCK("native_adblock", "Native YT with AdBlock", "Fast embedded player with 0ms ad-block & SponsorBlock");
+    FLOW("flow", "Flow Engine", "Flow / InnerTube fast direct stream engine");
 
     companion object {
         fun fromId(id: String?): YtStreamingBackend =
@@ -294,6 +295,8 @@ class SettingsPreferences @Inject constructor(
         val ENABLE_YOUTUBE_VIDEO = booleanPreferencesKey("lw_enable_youtube_video")
         val YOUTUBE_BACKGROUND_AUDIO_DEFAULT = booleanPreferencesKey("lw_youtube_bg_audio")
         val ENABLE_AI_TRANSCRIPTION = booleanPreferencesKey("lw_enable_ai_transcription")
+        val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("lw_default_video_quality")
+        val DEFAULT_AUDIO_QUALITY = stringPreferencesKey("lw_default_audio_quality")
     }
 
     val settings: Flow<MiscSettings> = dataStore.data
@@ -342,6 +345,8 @@ class SettingsPreferences @Inject constructor(
                 enableYoutubeVideoFeatures = p.readSafely(Keys.ENABLE_YOUTUBE_VIDEO) ?: true,
                 youtubeBackgroundAudioDefault = p.readSafely(Keys.YOUTUBE_BACKGROUND_AUDIO_DEFAULT) ?: true,
                 enableAiTranscription = p.readSafely(Keys.ENABLE_AI_TRANSCRIPTION) ?: true,
+                defaultVideoQuality = p.readSafely(Keys.DEFAULT_VIDEO_QUALITY) ?: "720p",
+                defaultAudioQuality = p.readSafely(Keys.DEFAULT_AUDIO_QUALITY) ?: "High (320k)",
             )
         }
 
@@ -566,6 +571,14 @@ class SettingsPreferences @Inject constructor(
 
     suspend fun setEnableAiTranscription(enabled: Boolean) {
         dataStore.edit { it[Keys.ENABLE_AI_TRANSCRIPTION] = enabled }
+    }
+
+    suspend fun setDefaultVideoQuality(quality: String) {
+        dataStore.edit { it[Keys.DEFAULT_VIDEO_QUALITY] = quality }
+    }
+
+    suspend fun setDefaultAudioQuality(quality: String) {
+        dataStore.edit { it[Keys.DEFAULT_AUDIO_QUALITY] = quality }
     }
 
     private companion object {

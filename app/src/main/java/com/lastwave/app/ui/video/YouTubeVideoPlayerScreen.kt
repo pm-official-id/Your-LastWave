@@ -1,14 +1,9 @@
 package com.lastwave.app.ui.video
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.view.TextureView
 import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -99,7 +94,6 @@ import com.lastwave.app.data.video.YouTubeVideoStreamInfo
 import com.lastwave.app.playback.MusicPlayer
 import com.lastwave.app.playback.PlayableTrack
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,19 +101,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import javax.inject.Inject
-
-data class SponsorSegment(
-    val category: String,
-    val start: Double,
-    val end: Double,
-)
 
 sealed interface VideoPlayerStatus {
     data object Loading : VideoPlayerStatus
@@ -141,9 +123,6 @@ data class VideoPlayerUiState(
     val aiTranscription: String? = null,
     val isGeneratingTranscription: Boolean = false,
     val downloadMessage: String? = null,
-    val sponsorSegments: List<SponsorSegment> = emptyList(),
-    val sponsorSegmentsJson: String = "[]",
-    val sponsorMessage: String? = null,
     val streamingBackend: YtStreamingBackend = YtStreamingBackend.NEWPIPE,
 )
 
@@ -153,10 +132,8 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
     private val musicPlayer: MusicPlayer,
     private val trackDownloadManager: TrackDownloadManager,
     private val settingsPreferences: SettingsPreferences,
-    private val http: OkHttpClient,
 ) : ViewModel() {
 
-    private val json = Json { ignoreUnknownKeys = true }
     private val _uiState = MutableStateFlow(VideoPlayerUiState())
     val uiState: StateFlow<VideoPlayerUiState> = _uiState.asStateFlow()
 
@@ -182,9 +159,6 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
                 aiTranscription = null,
                 isGeneratingTranscription = false,
                 downloadMessage = null,
-                sponsorSegments = emptyList(),
-                sponsorSegmentsJson = "[]",
-                sponsorMessage = null,
             )
         }
         viewModelScope.launch {
@@ -216,52 +190,6 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
 
             streamDeferred.join()
             relatedDeferred.join()
-        }
-        fetchSponsorBlockSegments(videoId)
-    }
-
-    private fun fetchSponsorBlockSegments(videoId: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val url = "https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=%5B%22sponsor%22%2C%22selfpromo%22%2C%22interaction%22%2C%22intro%22%2C%22outro%22%5D"
-            val request = Request.Builder().url(url).build()
-            try {
-                http.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) return@use
-                    val body = response.body?.string() ?: return@use
-                    val array = json.parseToJsonElement(body) as? JsonArray ?: return@use
-                    val segments = array.mapNotNull { element ->
-                        val obj = element as? JsonObject ?: return@mapNotNull null
-                        val cat = (obj["category"] as? JsonPrimitive)?.content ?: "sponsor"
-                        val seg = obj["segment"] as? JsonArray ?: return@mapNotNull null
-                        if (seg.size >= 2) {
-                            val start = (seg[0] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 0.0
-                            val end = (seg[1] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 0.0
-                            SponsorSegment(cat, start, end)
-                        } else null
-                    }
-                    val jsonString = buildString {
-                        append("[")
-                        append(segments.joinToString(",") { "{\"start\":${it.start},\"end\":${it.end},\"category\":\"${it.category}\"}" })
-                        append("]")
-                    }
-                    _uiState.update {
-                        it.copy(
-                            sponsorSegments = segments,
-                            sponsorSegmentsJson = jsonString,
-                        )
-                    }
-                }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(sponsorSegments = emptyList(), sponsorSegmentsJson = "[]") }
-            }
-        }
-    }
-
-    fun notifySponsorSkipped(category: String) {
-        _uiState.update { it.copy(sponsorMessage = "Skipped $category (SponsorBlock)") }
-        viewModelScope.launch {
-            delay(2500)
-            _uiState.update { it.copy(sponsorMessage = null) }
         }
     }
 
@@ -318,7 +246,7 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
                 [00:15] Presented by ${s.channel} via LastWave AI Audio Engine.
                 [00:45] Raw Media3 ExoPlayer stream with synchronized audio & video tracks (100% ad-free).
                 [01:30] [High Fidelity Audio Stream]
-                [02:10] Core content highlights: fast playback, SponsorBlock segment skipping, and direct stream merging.
+                [02:10] Core content highlights: fast playback, direct stream merging, and zero ad interruptions.
                 [03:00] Thank you for listening and watching in-app!
             """.trimIndent()
             _uiState.update {
@@ -400,8 +328,8 @@ fun YouTubeVideoPlayerScreen(
     val streamInfo = (uiState.status as? VideoPlayerStatus.Ready)?.streamInfo
     val activeVideoUrl = uiState.selectedQualityUrl ?: streamInfo?.videoUrl
 
-    LaunchedEffect(activeVideoUrl, uiState.isAudioOnly, uiState.streamingBackend) {
-        if (uiState.isAudioOnly || activeVideoUrl.isNullOrBlank() || uiState.streamingBackend == YtStreamingBackend.NATIVE_ADBLOCK) {
+    LaunchedEffect(activeVideoUrl, uiState.isAudioOnly) {
+        if (uiState.isAudioOnly || activeVideoUrl.isNullOrBlank()) {
             exoPlayer.pause()
             return@LaunchedEffect
         }
@@ -434,23 +362,11 @@ fun YouTubeVideoPlayerScreen(
         }
     }
 
-    // Position polling & SponsorBlock auto-skipping for ExoPlayer
-    LaunchedEffect(exoPlayer, isPlaying, uiState.sponsorSegments) {
+    // Position polling
+    LaunchedEffect(exoPlayer, isPlaying) {
         while (isActive && isPlaying) {
             currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
             durationMs = exoPlayer.duration.coerceAtLeast(0L)
-
-            val currentSec = currentPositionMs / 1000.0
-            val matchingSponsor = uiState.sponsorSegments.firstOrNull { seg ->
-                currentSec >= seg.start && currentSec < seg.end - 0.5
-            }
-            if (matchingSponsor != null) {
-                val targetMs = (matchingSponsor.end * 1000).toLong()
-                exoPlayer.seekTo(targetMs)
-                currentPositionMs = targetMs
-                viewModel.notifySponsorSkipped(matchingSponsor.category)
-            }
-
             delay(300)
         }
     }
@@ -476,56 +392,48 @@ fun YouTubeVideoPlayerScreen(
                         indication = null,
                     ) { showControls = !showControls },
             ) {
-                if (uiState.streamingBackend == YtStreamingBackend.NATIVE_ADBLOCK) {
-                    FastYouTubeIFramePlayer(
-                        videoId = currentVideoId,
-                        sponsorSegmentsJson = uiState.sponsorSegmentsJson,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    AndroidView(
-                        factory = { ctx ->
-                            TextureView(ctx).apply {
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                )
-                                exoPlayer.setVideoTextureView(this)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                AndroidView(
+                    factory = { ctx ->
+                        TextureView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                            )
+                            exoPlayer.setVideoTextureView(this)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
 
-                    if (showControls) {
-                        VideoControlsOverlay(
-                            title = uiState.title,
-                            quality = uiState.selectedQualityLabel,
-                            availableQualities = (uiState.status as? VideoPlayerStatus.Ready)?.streamInfo?.availableQualities.orEmpty(),
-                            isPlaying = isPlaying,
-                            currentPositionMs = currentPositionMs,
-                            durationMs = durationMs,
-                            isFullscreen = true,
-                            onPlayPause = {
-                                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                            },
-                            onSeekTo = { pos ->
-                                exoPlayer.seekTo(pos)
-                                currentPositionMs = pos
-                            },
-                            onSkip10 = {
-                                val target = (exoPlayer.currentPosition + 10_000).coerceAtMost(durationMs)
-                                exoPlayer.seekTo(target)
-                            },
-                            onReplay10 = {
-                                val target = (exoPlayer.currentPosition - 10_000).coerceAtLeast(0)
-                                exoPlayer.seekTo(target)
-                            },
-                            onSelectQuality = viewModel::selectQuality,
-                            onToggleFullscreen = { isFullscreen = false },
-                            onBack = onBack,
-                            onDownload = viewModel::downloadVideo,
-                        )
-                    }
+                if (showControls) {
+                    VideoControlsOverlay(
+                        title = uiState.title,
+                        quality = uiState.selectedQualityLabel,
+                        availableQualities = (uiState.status as? VideoPlayerStatus.Ready)?.streamInfo?.availableQualities.orEmpty(),
+                        isPlaying = isPlaying,
+                        currentPositionMs = currentPositionMs,
+                        durationMs = durationMs,
+                        isFullscreen = true,
+                        onPlayPause = {
+                            if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        },
+                        onSeekTo = { pos ->
+                            exoPlayer.seekTo(pos)
+                            currentPositionMs = pos
+                        },
+                        onSkip10 = {
+                            val target = (exoPlayer.currentPosition + 10_000).coerceAtMost(durationMs)
+                            exoPlayer.seekTo(target)
+                        },
+                        onReplay10 = {
+                            val target = (exoPlayer.currentPosition - 10_000).coerceAtLeast(0)
+                            exoPlayer.seekTo(target)
+                        },
+                        onSelectQuality = viewModel::selectQuality,
+                        onToggleFullscreen = { isFullscreen = false },
+                        onBack = onBack,
+                        onDownload = viewModel::downloadVideo,
+                    )
                 }
             }
         } else {
@@ -585,7 +493,7 @@ fun YouTubeVideoPlayerScreen(
                     }
                 }
 
-                // Video Viewport
+                // Native Media3 ExoPlayer Viewport (100% Ad-Free Raw Stream)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -598,70 +506,64 @@ fun YouTubeVideoPlayerScreen(
                             indication = null,
                         ) { showControls = !showControls },
                 ) {
-                    if (uiState.isAudioOnly) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(16.dp),
-                            ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    modifier = Modifier.size(64.dp),
-                                ) {
-                                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            Icons.Filled.Headphones,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.size(32.dp),
-                                        )
-                                    }
-                                }
-                                Spacer(Modifier.height(12.dp))
+                    when (val currentStatus = uiState.status) {
+                        is VideoPlayerStatus.Loading -> {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        is VideoPlayerStatus.Error -> {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Playing in Background Audio Mode",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    "Zero battery drain \u2022 Lossless engine active",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    currentStatus.message,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(16.dp),
                                 )
                             }
                         }
-                    } else if (uiState.streamingBackend == YtStreamingBackend.NATIVE_ADBLOCK) {
-                        FastYouTubeIFramePlayer(
-                            videoId = currentVideoId,
-                            sponsorSegmentsJson = uiState.sponsorSegmentsJson,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        when (val currentStatus = uiState.status) {
-                            is VideoPlayerStatus.Loading -> {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                            is VideoPlayerStatus.Error -> {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text(
-                                        currentStatus.message,
-                                        color = MaterialTheme.colorScheme.error,
-                                        fontSize = 13.sp,
+                        is VideoPlayerStatus.Ready -> {
+                            if (uiState.isAudioOnly) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier.padding(16.dp),
-                                    )
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            modifier = Modifier.size(64.dp),
+                                        ) {
+                                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    Icons.Filled.Headphones,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    modifier = Modifier.size(32.dp),
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.height(12.dp))
+                                        Text(
+                                            "Playing in Background Audio Mode",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            "Zero battery drain \u2022 Lossless engine active",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
-                            }
-                            is VideoPlayerStatus.Ready -> {
+                            } else {
                                 AndroidView(
                                     factory = { ctx ->
                                         TextureView(ctx).apply {
@@ -710,7 +612,7 @@ fun YouTubeVideoPlayerScreen(
                     }
                 }
 
-                // 100% Ad-Free + SponsorBlock Status Badge
+                // 100% Ad-Free Status Badge
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     shape = RoundedCornerShape(12.dp),
@@ -730,8 +632,7 @@ fun YouTubeVideoPlayerScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = uiState.sponsorMessage
-                                ?: "${uiState.streamingBackend.title} \u2022 100% Ad-Free \u2022 SponsorBlock Active",
+                            text = "${uiState.streamingBackend.title} \u2022 100% Ad-Free Native Stream",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary,
@@ -990,93 +891,6 @@ fun YouTubeVideoPlayerScreen(
             }
         }
     }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-@Composable
-private fun FastYouTubeIFramePlayer(
-    videoId: String,
-    sponsorSegmentsJson: String = "[]",
-    modifier: Modifier = Modifier,
-) {
-    val htmlContent = remember(videoId, sponsorSegmentsJson) {
-        """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-                body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; }
-                iframe { width: 100%; height: 100%; border: none; }
-            </style>
-        </head>
-        <body>
-            <iframe id="player" src="https://www.youtube.com/embed/$videoId?enablejsapi=1&autoplay=1&controls=1&modestbranding=1&playsinline=1&rel=0&origin=https://www.youtube.com"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen></iframe>
-
-            <script>
-                setInterval(function() {
-                    var skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .videoAdUiSkipButton');
-                    if (skipBtn) { skipBtn.click(); }
-                    var adOverlay = document.querySelector('.ytp-ad-overlay-container, .ytp-ad-message-container, .video-ads, .ytp-ad-module');
-                    if (adOverlay) { adOverlay.style.display = 'none'; }
-                    var video = document.querySelector('video');
-                    if (video && (document.querySelector('.ad-showing') || document.querySelector('.ytp-ad-text'))) {
-                        video.currentTime = video.duration || 999;
-                    }
-                }, 100);
-
-                var segments = $sponsorSegmentsJson;
-                if (segments && segments.length > 0) {
-                    setInterval(function() {
-                        var video = document.querySelector('video');
-                        if (!video || video.paused) return;
-                        var currentTime = video.currentTime;
-                        for (var i = 0; i < segments.length; i++) {
-                            var start = segments[i].start;
-                            var end = segments[i].end;
-                            if (currentTime >= start && currentTime < end - 0.5) {
-                                video.currentTime = end;
-                                console.log("SponsorBlock: Skipped " + segments[i].category + " (" + start + "s -> " + end + "s)");
-                                break;
-                            }
-                        }
-                    }, 250);
-                }
-            </script>
-        </body>
-        </html>
-        """.trimIndent()
-    }
-
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                )
-                settings.javaScriptEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.domStorageEnabled = true
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
-                settings.userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
-                webChromeClient = WebChromeClient()
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                        return false
-                    }
-                }
-                loadDataWithBaseURL("https://www.youtube.com", htmlContent, "text/html", "UTF-8", "https://www.youtube.com")
-            }
-        },
-        update = { webView ->
-            webView.loadDataWithBaseURL("https://www.youtube.com", htmlContent, "text/html", "UTF-8", "https://www.youtube.com")
-        },
-        modifier = modifier,
-    )
 }
 
 @Composable
