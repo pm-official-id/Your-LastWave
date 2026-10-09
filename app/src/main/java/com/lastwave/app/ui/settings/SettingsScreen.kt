@@ -472,6 +472,8 @@ fun SettingsScreen(
     var showQualityDialog by remember { mutableStateOf(false) }
     var showDownloadQualityDialog by remember { mutableStateOf(false) }
     var showYtBackendDialog by remember { mutableStateOf(false) }
+    var showVideoQualityDialog by remember { mutableStateOf(false) }
+    var showAudioQualityDialog by remember { mutableStateOf(false) }
     var showEqSheet by remember { mutableStateOf(false) }
     var showLyricsAnimationSheet by remember { mutableStateOf(false) }
     var showLyricsProviderDialog by remember { mutableStateOf(false) }
@@ -1291,11 +1293,13 @@ fun SettingsScreen(
                     }
                 }
             }
+                    }
 
-            item {
+                    SettingsTab.YOUTUBE -> {
+                        item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SectionLabel("YouTube Video & AI Integration")
-                    SettingsGroup(rowCount = 4) { index, position ->
+                    SectionLabel("YouTube Video & In-App Player Tweaks")
+                    SettingsGroup(rowCount = 6) { index, position ->
                         when (index) {
                             0 -> SettingsToggleCard(
                                 icon = Icons.Filled.Videocam,
@@ -1326,7 +1330,25 @@ fun SettingsScreen(
                                 onCheckedChange = viewModel::setYoutubeBackgroundAudioDefault,
                                 position = position,
                             )
-                            3 -> SettingsToggleCard(
+                            3 -> SettingsActionCard(
+                                icon = Icons.Filled.HighQuality,
+                                iconContainer = MaterialTheme.colorScheme.primaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                title = "Default Video Quality",
+                                subtitle = misc.defaultVideoQuality,
+                                onClick = { showVideoQualityDialog = true },
+                                position = position,
+                            )
+                            4 -> SettingsActionCard(
+                                icon = Icons.Filled.GraphicEq,
+                                iconContainer = MaterialTheme.colorScheme.secondaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                title = "Default Audio Quality",
+                                subtitle = misc.defaultAudioQuality,
+                                onClick = { showAudioQualityDialog = true },
+                                position = position,
+                            )
+                            5 -> SettingsToggleCard(
                                 icon = Icons.Filled.AutoAwesome,
                                 iconContainer = MaterialTheme.colorScheme.primaryContainer,
                                 iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1340,9 +1362,7 @@ fun SettingsScreen(
                     }
                 }
             }
-                    }
 
-                    SettingsTab.YOUTUBE -> {
                         item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionLabel(stringResource(R.string.settings_section_youtube))
@@ -2489,6 +2509,96 @@ fun SettingsScreen(
             onDismiss = { showYtBackendDialog = false },
         )
     }
+
+    if (showVideoQualityDialog) {
+        VideoQualityDialog(
+            current = misc.defaultVideoQuality,
+            onSelect = viewModel::setDefaultVideoQuality,
+            onDismiss = { showVideoQualityDialog = false },
+        )
+    }
+
+    if (showAudioQualityDialog) {
+        AudioQualityDialog(
+            current = misc.defaultAudioQuality,
+            onSelect = viewModel::setDefaultAudioQuality,
+            onDismiss = { showAudioQualityDialog = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoQualityDialog(
+    current: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = listOf("1080p", "720p", "480p", "360p", "Auto (Highest)")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Default Video Quality") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                options.forEach { q ->
+                    val selected = q.equals(current, ignoreCase = true)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(q); onDismiss() }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected, onClick = { onSelect(q); onDismiss() })
+                        Spacer(Modifier.width(8.dp))
+                        Text(q, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AudioQualityDialog(
+    current: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val options = listOf("Lossless FLAC", "High (320k)", "Normal (160k)")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Default Audio Quality") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                options.forEach { q ->
+                    val selected = q.equals(current, ignoreCase = true)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(q); onDismiss() }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected, onClick = { onSelect(q); onDismiss() })
+                        Spacer(Modifier.width(8.dp))
+                        Text(q, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
