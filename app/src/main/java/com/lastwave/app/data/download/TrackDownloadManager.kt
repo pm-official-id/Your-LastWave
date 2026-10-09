@@ -1256,6 +1256,20 @@ class TrackDownloadManager @Inject constructor(
                             ?.takeIf { it.isNotBlank() }
                         val ytStream = resolvedStream
                         resolvedUrl = ytStream.url
+
+                        val extPkg = settingsPreferences.settings.first().externalDownloaderPackage
+                        if (extPkg.isNotBlank() && resolvedUrl != null) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedUrl)).apply {
+                                setPackage(extPkg)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            runCatching { context.startActivity(intent) }
+                            updateStage("Handed off to external downloader", notify = true)
+                            downloadSlots.release()
+                            forgetDownloadKey(key)
+                            return
+                        }
+
                         downloadHeaders = ytStream.requestHeaders
                         expectedContentLength = ytStream.contentLength
                             ?: runCatching { Uri.parse(ytStream.url).getQueryParameter("clen")?.toLongOrNull() }.getOrNull()

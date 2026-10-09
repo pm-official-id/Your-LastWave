@@ -474,6 +474,8 @@ fun SettingsScreen(
     var showYtBackendDialog by remember { mutableStateOf(false) }
     var showVideoQualityDialog by remember { mutableStateOf(false) }
     var showAudioQualityDialog by remember { mutableStateOf(false) }
+    var showExternalDownloaderDialog by remember { mutableStateOf(false) }
+    val installedDownloadApps = remember { viewModel.queryInstalledDownloadApps() }
     var showEqSheet by remember { mutableStateOf(false) }
     var showLyricsAnimationSheet by remember { mutableStateOf(false) }
     var showLyricsProviderDialog by remember { mutableStateOf(false) }
@@ -1573,6 +1575,23 @@ fun SettingsScreen(
                     SettingsTab.LIBRARY -> {
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                SectionLabel("Download Manager")
+                                SettingsGroup(rowCount = 1) { index, position ->
+                                    SettingsActionCard(
+                                        icon = Icons.Filled.Download,
+                                        iconContainer = MaterialTheme.colorScheme.primaryContainer,
+                                        iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        title = "External Downloader App",
+                                        subtitle = misc.externalDownloaderName.ifBlank { "Internal Downloader (Default)" },
+                                        onClick = { showExternalDownloaderDialog = true },
+                                        position = position,
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 SectionLabel("Home & Organization")
                                 SettingsGroup(rowCount = 2) { index, position ->
                                     when (index) {
@@ -2510,6 +2529,15 @@ fun SettingsScreen(
         )
     }
 
+    if (showExternalDownloaderDialog) {
+        ExternalDownloaderDialog(
+            currentPackage = misc.externalDownloaderPackage,
+            installedApps = installedDownloadApps,
+            onSelect = viewModel::setExternalDownloader,
+            onDismiss = { showExternalDownloaderDialog = false },
+        )
+    }
+
     if (showVideoQualityDialog) {
         VideoQualityDialog(
             current = misc.defaultVideoQuality,
@@ -2653,6 +2681,66 @@ private fun YtStreamingBackendDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Done") }
         },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExternalDownloaderDialog(
+    currentPackage: String,
+    installedApps: List<SettingsViewModel.ExternalAppItem>,
+    onSelect: (String, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select External Downloader") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 380.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                val internalSelected = currentPackage.isBlank()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onSelect("", "Internal Downloader (Default)"); onDismiss() }
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = internalSelected, onClick = { onSelect("", "Internal Downloader (Default)"); onDismiss() })
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Internal Downloader (Default)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text("Built-in LastWave high-speed downloader", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
+                installedApps.forEach { app ->
+                    val selected = app.packageName == currentPackage
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onSelect(app.packageName, app.appName); onDismiss() }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = selected, onClick = { onSelect(app.packageName, app.appName); onDismiss() })
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(app.appName, style = MaterialTheme.typography.bodyMedium, fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold)
+                            Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Done") } },
     )
 }
 

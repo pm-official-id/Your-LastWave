@@ -579,6 +579,23 @@ class SettingsViewModel @Inject constructor(
         settingsPreferences.setDownloadLyrics(enabled)
     }
 
+    data class ExternalAppItem(val packageName: String, val appName: String)
+
+    fun queryInstalledDownloadApps(): List<ExternalAppItem> {
+        val pm = context.packageManager
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://"))
+        val resolveInfos = pm.queryIntentActivities(intent, 0)
+        return resolveInfos.mapNotNull { resolve ->
+            val pkg = resolve.activityInfo?.packageName ?: return@mapNotNull null
+            val name = pm.getApplicationLabel(resolve.activityInfo.applicationInfo).toString()
+            ExternalAppItem(pkg, name)
+        }.distinctBy { it.packageName }.sortedBy { it.appName }
+    }
+
+    fun setExternalDownloader(pkg: String, name: String) = launchSettingsAction("update external downloader") {
+        settingsPreferences.setExternalDownloader(pkg, name)
+    }
+
     /** Persists + applies; AppLocaleManager owns error handling and threading. */
     fun setAppLanguage(language: AppLanguage) {
         appLocaleManager.applyLanguage(language)

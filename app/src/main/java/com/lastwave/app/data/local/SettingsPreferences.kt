@@ -177,6 +177,8 @@ data class MiscSettings(
     val enableAiTranscription: Boolean = true,
     val defaultVideoQuality: String = "720p",
     val defaultAudioQuality: String = "High (320k)",
+    val externalDownloaderPackage: String = "",
+    val externalDownloaderName: String = "",
 )
 
 enum class YtStreamingBackend(val id: String, val title: String, val subtitle: String) {
@@ -297,6 +299,8 @@ class SettingsPreferences @Inject constructor(
         val ENABLE_AI_TRANSCRIPTION = booleanPreferencesKey("lw_enable_ai_transcription")
         val DEFAULT_VIDEO_QUALITY = stringPreferencesKey("lw_default_video_quality")
         val DEFAULT_AUDIO_QUALITY = stringPreferencesKey("lw_default_audio_quality")
+        val EXTERNAL_DOWNLOADER_PACKAGE = stringPreferencesKey("lw_external_downloader_package")
+        val EXTERNAL_DOWNLOADER_NAME = stringPreferencesKey("lw_external_downloader_name")
     }
 
     val settings: Flow<MiscSettings> = dataStore.data
@@ -347,6 +351,8 @@ class SettingsPreferences @Inject constructor(
                 enableAiTranscription = p.readSafely(Keys.ENABLE_AI_TRANSCRIPTION) ?: true,
                 defaultVideoQuality = p.readSafely(Keys.DEFAULT_VIDEO_QUALITY) ?: "720p",
                 defaultAudioQuality = p.readSafely(Keys.DEFAULT_AUDIO_QUALITY) ?: "High (320k)",
+                externalDownloaderPackage = p.readSafely(Keys.EXTERNAL_DOWNLOADER_PACKAGE)?.takeIf { it.isNotBlank() }.orEmpty(),
+                externalDownloaderName = p.readSafely(Keys.EXTERNAL_DOWNLOADER_NAME)?.takeIf { it.isNotBlank() }.orEmpty(),
             )
         }
 
@@ -579,6 +585,18 @@ class SettingsPreferences @Inject constructor(
 
     suspend fun setDefaultAudioQuality(quality: String) {
         dataStore.edit { it[Keys.DEFAULT_AUDIO_QUALITY] = quality }
+    }
+
+    suspend fun setExternalDownloader(pkg: String, name: String) {
+        dataStore.edit {
+            if (pkg.isBlank()) {
+                it.remove(Keys.EXTERNAL_DOWNLOADER_PACKAGE)
+                it.remove(Keys.EXTERNAL_DOWNLOADER_NAME)
+            } else {
+                it[Keys.EXTERNAL_DOWNLOADER_PACKAGE] = pkg
+                it[Keys.EXTERNAL_DOWNLOADER_NAME] = name
+            }
+        }
     }
 
     private companion object {
