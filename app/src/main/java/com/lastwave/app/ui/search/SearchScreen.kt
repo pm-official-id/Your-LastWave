@@ -254,6 +254,7 @@ fun SearchScreen(
                 SearchFilterPills(
                     selectedTab = state.tab,
                     onTabSelected = viewModel::setTab,
+                    enableVideos = state.enableYoutubeVideoFeatures,
                 )
             }
         }
@@ -901,11 +902,12 @@ private fun SearchResultRow(
 private fun SearchFilterPills(
     selectedTab: SearchTab,
     onTabSelected: (SearchTab) -> Unit,
+    enableVideos: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(
+    val tabs = listOfNotNull(
         SearchTab.TRACKS to "Tracks",
-        SearchTab.VIDEOS to "Videos",
+        if (enableVideos) SearchTab.VIDEOS to "Videos" else null,
         SearchTab.ARTISTS to "Artists",
         SearchTab.ALBUMS to "Albums",
         SearchTab.PLAYLISTS to "Playlists",

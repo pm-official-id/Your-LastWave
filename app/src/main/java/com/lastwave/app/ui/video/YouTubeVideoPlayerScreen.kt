@@ -95,11 +95,12 @@ import com.lastwave.app.playback.MusicPlayer
 import com.lastwave.app.playback.PlayableTrack
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -140,12 +141,18 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsPreferences.settings.collect { s ->
-                _uiState.update { it.copy(streamingBackend = s.ytStreamingBackend) }
+                _uiState.update {
+                    it.copy(
+                        streamingBackend = s.ytStreamingBackend,
+                        isAudioOnly = s.youtubeBackgroundAudioDefault,
+                    )
+                }
             }
         }
     }
 
     fun initVideo(videoId: String, title: String, channel: String, thumbnailUrl: String) {
+        val currentSettings = runCatching { kotlinx.coroutines.runBlocking { settingsPreferences.settings.first() } }.getOrDefault(com.lastwave.app.data.local.MiscSettings())
         if (_uiState.value.videoId == videoId && _uiState.value.status !is VideoPlayerStatus.Error) return
         _uiState.update {
             it.copy(
@@ -154,7 +161,7 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
                 channel = channel,
                 thumbnailUrl = thumbnailUrl,
                 status = VideoPlayerStatus.Loading,
-                isAudioOnly = false,
+                isAudioOnly = currentSettings.youtubeBackgroundAudioDefault,
                 relatedVideos = emptyList(),
                 aiTranscription = null,
                 isGeneratingTranscription = false,
@@ -165,12 +172,33 @@ class YouTubeVideoPlayerViewModel @Inject constructor(
             val streamDeferred = viewModelScope.launch {
                 try {
                     val streamInfo = streamExtractor.resolveVideoStream(videoId)
+                    val prefQuality = currentSettings.defaultVideoQuality
+                    val matched = if (prefQuality.startsWith("Auto", ignoreCase = true)) {
+                        streamInfo.availableQualities.firstOrNull()
+                    } else {
+                        streamInfo.availableQualities.firstOrNull { it.qualityLabel.equals(prefQuality, ignoreCase = true) }
+                            ?: streamInfo.availableQualities.firstOrNull()
+                    }
+                    val qualityUrl = matched?.videoUrl ?: streamInfo.videoUrl
+                    val qualityLabel = matched?.qualityLabel ?: streamInfo.qualityLabel.ifBlank { "HD" }
+
                     _uiState.update {
                         it.copy(
                             status = VideoPlayerStatus.Ready(streamInfo),
-                            selectedQualityUrl = streamInfo.videoUrl,
-                            selectedQualityLabel = streamInfo.qualityLabel.ifBlank { "HD" },
+                            selectedQualityUrl = qualityUrl,
+                            selectedQualityLabel = qualityLabel,
+                            isAudioOnly = currentSettings.youtubeBackgroundAudioDefault,
                         )
+                    }
+                    if (currentSettings.youtubeBackgroundAudioDefault) {
+                        val track = PlayableTrack(
+                            title = title.ifBlank { "YouTube Video" },
+                            artist = channel.ifBlank { "YouTube" },
+                            album = "YouTube Video Stream",
+                            artworkUrl = thumbnailUrl,
+                            videoId = videoId,
+                        )
+                        musicPlayer.play(track, sourceLabel = "YouTube Video", startRadio = false)
                     }
                 } catch (e: Exception) {
                     _uiState.update {

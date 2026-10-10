@@ -3,6 +3,7 @@ package com.lastwave.app.ui.search
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lastwave.app.data.local.SettingsPreferences
 import com.lastwave.app.data.search.SearchHistoryRepository
 import com.lastwave.app.data.search.SearchRepository
 import com.lastwave.app.data.search.SearchResultItem
@@ -30,6 +31,7 @@ data class SearchUiState(
     val suggestions: List<String> = emptyList(),
     val recentSearches: List<String> = emptyList(),
     val isShowingSuggestions: Boolean = false,
+    val enableYoutubeVideoFeatures: Boolean = true,
 )
 
 /**
@@ -41,6 +43,7 @@ class SearchViewModel @Inject constructor(
     private val repository: SearchRepository,
     private val historyRepository: SearchHistoryRepository,
     private val musicPlayer: MusicPlayer,
+    private val settingsPreferences: SettingsPreferences,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -55,6 +58,16 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             historyRepository.history.collect { history ->
                 _uiState.update { it.copy(recentSearches = history) }
+            }
+        }
+        viewModelScope.launch {
+            settingsPreferences.settings.collect { s ->
+                _uiState.update {
+                    it.copy(
+                        enableYoutubeVideoFeatures = s.enableYoutubeVideoFeatures,
+                        tab = if (!s.enableYoutubeVideoFeatures && it.tab == SearchTab.VIDEOS) SearchTab.TRACKS else it.tab,
+                    )
+                }
             }
         }
     }
