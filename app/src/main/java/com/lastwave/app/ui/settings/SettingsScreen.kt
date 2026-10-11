@@ -1360,6 +1360,26 @@ fun SettingsScreen(
                                 onCheckedChange = viewModel::setEnableAiTranscription,
                                 position = position,
                             )
+                            6 -> SettingsToggleCard(
+                                icon = Icons.Filled.Bolt,
+                                iconContainer = MaterialTheme.colorScheme.secondaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                title = "Enable Stream Pre-fetching",
+                                subtitle = "Pre-warm stream resolvers for instant playback on tap",
+                                checked = misc.enableStreamPrefetching,
+                                onCheckedChange = viewModel::setEnableStreamPrefetching,
+                                position = position,
+                            )
+                            7 -> SettingsToggleCard(
+                                icon = Icons.Filled.SmartDisplay,
+                                iconContainer = MaterialTheme.colorScheme.tertiaryContainer,
+                                iconTint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                title = "Picture-in-Picture (PiP) Mode",
+                                subtitle = "Allow video playback in a floating window when leaving app",
+                                checked = misc.pipModeEnabled,
+                                onCheckedChange = viewModel::setPipModeEnabled,
+                                position = position,
+                            )
                         }
                     }
                 }
@@ -1576,16 +1596,28 @@ fun SettingsScreen(
                         item {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 SectionLabel("Download Manager")
-                                SettingsGroup(rowCount = 1) { index, position ->
-                                    SettingsActionCard(
-                                        icon = Icons.Filled.Download,
-                                        iconContainer = MaterialTheme.colorScheme.primaryContainer,
-                                        iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        title = "External Downloader App",
-                                        subtitle = misc.externalDownloaderName.ifBlank { "Internal Downloader (Default)" },
-                                        onClick = { showExternalDownloaderDialog = true },
-                                        position = position,
-                                    )
+                                SettingsGroup(rowCount = 2) { index, position ->
+                                    when (index) {
+                                        0 -> SettingsActionCard(
+                                            icon = Icons.Filled.Download,
+                                            iconContainer = MaterialTheme.colorScheme.primaryContainer,
+                                            iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            title = "External Downloader App",
+                                            subtitle = misc.externalDownloaderName.ifBlank { "Internal Downloader (Default)" },
+                                            onClick = { showExternalDownloaderDialog = true },
+                                            position = position,
+                                        )
+                                        else -> SettingsToggleCard(
+                                            icon = Icons.Filled.Lyrics,
+                                            iconContainer = MaterialTheme.colorScheme.secondaryContainer,
+                                            iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            title = "Download Synced Lyrics (.lrc)",
+                                            subtitle = "Bundle .lrc companion files and embedded tags during downloads",
+                                            checked = misc.bundleLrcFiles,
+                                            onCheckedChange = viewModel::setBundleLrcFiles,
+                                            position = position,
+                                        )
+                                    }
                                 }
                             }
                         }
