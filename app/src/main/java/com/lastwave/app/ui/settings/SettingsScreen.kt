@@ -1301,7 +1301,7 @@ fun SettingsScreen(
                         item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionLabel("YouTube Video & In-App Player Tweaks")
-                    SettingsGroup(rowCount = 6) { index, position ->
+                    SettingsGroup(rowCount = 8) { index, position ->
                         when (index) {
                             0 -> SettingsToggleCard(
                                 icon = Icons.Filled.Videocam,
