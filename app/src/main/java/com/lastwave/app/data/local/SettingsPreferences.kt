@@ -179,6 +179,10 @@ data class MiscSettings(
     val defaultAudioQuality: String = "High (320k)",
     val externalDownloaderPackage: String = "",
     val externalDownloaderName: String = "",
+    val enableStreamPrefetching: Boolean = true,
+    val pipModeEnabled: Boolean = true,
+    val acousticPreset: String = "Studio Master",
+    val bundleLrcFiles: Boolean = true,
 )
 
 enum class YtStreamingBackend(val id: String, val title: String, val subtitle: String) {
@@ -301,6 +305,10 @@ class SettingsPreferences @Inject constructor(
         val DEFAULT_AUDIO_QUALITY = stringPreferencesKey("lw_default_audio_quality")
         val EXTERNAL_DOWNLOADER_PACKAGE = stringPreferencesKey("lw_external_downloader_package")
         val EXTERNAL_DOWNLOADER_NAME = stringPreferencesKey("lw_external_downloader_name")
+        val ENABLE_STREAM_PREFETCHING = booleanPreferencesKey("lw_enable_stream_prefetching")
+        val PIP_MODE_ENABLED = booleanPreferencesKey("lw_pip_mode_enabled")
+        val ACOUSTIC_PRESET = stringPreferencesKey("lw_acoustic_preset")
+        val BUNDLE_LRC_FILES = booleanPreferencesKey("lw_bundle_lrc_files")
     }
 
     val settings: Flow<MiscSettings> = dataStore.data
@@ -353,6 +361,10 @@ class SettingsPreferences @Inject constructor(
                 defaultAudioQuality = p.readSafely(Keys.DEFAULT_AUDIO_QUALITY) ?: "High (320k)",
                 externalDownloaderPackage = p.readSafely(Keys.EXTERNAL_DOWNLOADER_PACKAGE)?.takeIf { it.isNotBlank() }.orEmpty(),
                 externalDownloaderName = p.readSafely(Keys.EXTERNAL_DOWNLOADER_NAME)?.takeIf { it.isNotBlank() }.orEmpty(),
+                enableStreamPrefetching = p.readSafely(Keys.ENABLE_STREAM_PREFETCHING) ?: true,
+                pipModeEnabled = p.readSafely(Keys.PIP_MODE_ENABLED) ?: true,
+                acousticPreset = p.readSafely(Keys.ACOUSTIC_PRESET) ?: "Studio Master",
+                bundleLrcFiles = p.readSafely(Keys.BUNDLE_LRC_FILES) ?: true,
             )
         }
 
@@ -597,6 +609,22 @@ class SettingsPreferences @Inject constructor(
                 it[Keys.EXTERNAL_DOWNLOADER_NAME] = name
             }
         }
+    }
+
+    suspend fun setEnableStreamPrefetching(enabled: Boolean) {
+        dataStore.edit { it[Keys.ENABLE_STREAM_PREFETCHING] = enabled }
+    }
+
+    suspend fun setPipModeEnabled(enabled: Boolean) {
+        dataStore.edit { it[Keys.PIP_MODE_ENABLED] = enabled }
+    }
+
+    suspend fun setAcousticPreset(preset: String) {
+        dataStore.edit { it[Keys.ACOUSTIC_PRESET] = preset }
+    }
+
+    suspend fun setBundleLrcFiles(enabled: Boolean) {
+        dataStore.edit { it[Keys.BUNDLE_LRC_FILES] = enabled }
     }
 
     private companion object {

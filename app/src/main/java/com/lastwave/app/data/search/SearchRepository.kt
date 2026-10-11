@@ -91,6 +91,7 @@ class SearchRepository @Inject constructor(
             }
             SearchTab.VIDEOS -> {
                 val videos = innerTube.searchVideos(query).ifEmpty { streamExtractor.searchVideos(query) }
+                videos.take(3).forEach { streamExtractor.preWarm(it.videoId) }
                 videos.map { video ->
                     val metaParts = mutableListOf<String>()
                     if (!video.channelName.isNullOrBlank()) metaParts += video.channelName

@@ -2,6 +2,8 @@ package com.lastwave.app.data.music
 
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -29,10 +31,19 @@ class YouTubeStreamExtractor @Inject constructor(
     private val downloader = OkHttpNewPipeDownloader(http)
     private val videoStreamCache = java.util.concurrent.ConcurrentHashMap<String, com.lastwave.app.data.video.YouTubeVideoStreamInfo>()
 
+    private val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO + SupervisorJob())
+
     @Volatile
     private var initialized = false
 
     fun invalidateCache(@Suppress("UNUSED_PARAMETER") videoId: String) = Unit
+
+    fun preWarm(videoId: String) {
+        if (videoId.isBlank() || videoStreamCache.containsKey(videoId)) return
+        scope.launch {
+            runCatching { resolveVideoStream(videoId) }
+        }
+    }
 
     suspend fun resolveAudioStream(
         videoId: String,

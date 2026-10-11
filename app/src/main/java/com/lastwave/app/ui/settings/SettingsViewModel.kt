@@ -578,6 +578,18 @@ class SettingsViewModel @Inject constructor(
     fun setDownloadLyrics(enabled: Boolean) = launchSettingsAction("update download lyrics setting") {
         settingsPreferences.setDownloadLyrics(enabled)
     }
+    fun setEnableStreamPrefetching(enabled: Boolean) = launchSettingsAction("update stream prefetching setting") {
+        settingsPreferences.setEnableStreamPrefetching(enabled)
+    }
+    fun setPipModeEnabled(enabled: Boolean) = launchSettingsAction("update PiP mode setting") {
+        settingsPreferences.setPipModeEnabled(enabled)
+    }
+    fun setAcousticPreset(preset: String) = launchSettingsAction("update acoustic preset") {
+        settingsPreferences.setAcousticPreset(preset)
+    }
+    fun setBundleLrcFiles(enabled: Boolean) = launchSettingsAction("update bundle lrc files setting") {
+        settingsPreferences.setBundleLrcFiles(enabled)
+    }
 
     data class ExternalAppItem(val packageName: String, val appName: String)
 
