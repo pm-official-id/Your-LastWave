@@ -300,6 +300,7 @@ fun YouTubeVideoPlayerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context as? Activity
+    val inPipMode = activity?.isInPictureInPictureMode == true
 
     var currentVideoId by remember(videoId) { mutableStateOf(videoId) }
     var currentTitle by remember(title) { mutableStateOf(title) }
@@ -356,8 +357,9 @@ fun YouTubeVideoPlayerScreen(
     val streamInfo = (uiState.status as? VideoPlayerStatus.Ready)?.streamInfo
     val activeVideoUrl = uiState.selectedQualityUrl ?: streamInfo?.videoUrl
 
-    LaunchedEffect(activeVideoUrl, uiState.isAudioOnly) {
-        if (uiState.isAudioOnly || activeVideoUrl.isNullOrBlank()) {
+    LaunchedEffect(activeVideoUrl, uiState.isAudioOnly, inPipMode) {
+        val forceVideo = inPipMode
+        if ((uiState.isAudioOnly && !forceVideo) || activeVideoUrl.isNullOrBlank()) {
             exoPlayer.pause()
             return@LaunchedEffect
         }
@@ -410,7 +412,27 @@ fun YouTubeVideoPlayerScreen(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        if (isFullscreen) {
+        if (inPipMode) {
+            // In Picture-in-Picture floating window mode: render ONLY the 16:9 video TextureView
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        TextureView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                            )
+                            exoPlayer.setVideoTextureView(this)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        } else if (isFullscreen) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
