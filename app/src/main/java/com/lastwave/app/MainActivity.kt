@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lastwave.app.util.AppLocaleManager
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import com.lastwave.app.data.repository.LastFmAuthCallbackCoordinator
@@ -268,6 +269,21 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         runCatching { lastFmAuthCallback.capture(intent) }
         handlePlaybackIntent(intent)
         handleNavigationIntent(intent)
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val settings = runCatching { kotlinx.coroutines.runBlocking { settingsPreferences.settings.first() } }.getOrNull()
+            if (settings?.pipModeEnabled == true) {
+                runCatching {
+                    val params = android.app.PictureInPictureParams.Builder()
+                        .setAspectRatio(android.util.Rational(16, 9))
+                        .build()
+                    enterPictureInPictureMode(params)
+                }
+            }
+        }
     }
 
     private companion object {
